@@ -191,11 +191,22 @@ public class MADRE_TextPro_Analysis {
 		NOUN_POS,		//'S'
 		VERB_POS};		//'V'
 	
+	/*
+	//OLD COMBINATION
 	static final Color[] colorsPos = new ColorImpl[]{
 			new ColorImpl(0,255,0), 	// green adj (A)
 			new ColorImpl(255,0,255), 	// violet keywords (K)
 			new ColorImpl(0,0,255), 	// blue nouns (S)
 			new ColorImpl(255,0,0) 		// red verbs (V)			
+	};
+	*/
+	
+	//NEW COMBINATION
+	static final Color[] colorsPos = new ColorImpl[]{
+		new ColorImpl(178,102,255), // VIOLET adj (A)
+		new ColorImpl(255,0,255), 	// VIOLET keywords (K)
+		new ColorImpl(0,128,255), 	// BLUE nouns (S)
+		new ColorImpl(255,102,0) 	// ORANGE verbs (V)			
 	};
 	
 	static final Color blackColor = new ColorImpl(0,0,0);
@@ -203,13 +214,19 @@ public class MADRE_TextPro_Analysis {
 	static final HashSet<String> excludedLemmas = new HashSet<String>(
 			Arrays.asList(
 					new String[]{
+							//trentino
 							"avere",
 							"essere", 
-							"essere stare", 
+							"essere stare",
 							"RIPRODUZIONE",
 							"RISERVATA",
 							"b",
-							"c"
+							"c",
+							//corriere
+							"riproduzione",
+							"Pagina",
+							"Sera",
+							"Corriere"
 					}
 					//new String[]{}
 					// potere, volere,
@@ -348,6 +365,45 @@ public class MADRE_TextPro_Analysis {
 		pw.close();
 	}
 
+	static void testCsvFile(File fileCsv) throws FileNotFoundException, IOException {
+		out.println("Testing file: " + fileCsv);
+		
+		CSVParser parser=null;
+		try {
+			parser = CSVParser.parse(fileCsv, Charset.forName("UTF-8"), CSVFormat.RFC4180); //CSVFormat.EXCEL //CSVFormat.MYSQL
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		//LinkedList<TextToken> token_sentence = new LinkedList<TextToken>();
+		int count = 0;
+		int sentenceCount = -1;
+		
+		Iterator<CSVRecord> lineIter = parser.iterator();
+		lineIter.next(); // header
+						
+		while(lineIter.hasNext()) {
+			CSVRecord line = lineIter.next();
+			String word = removeQuotes(line.get(4));
+			String pos = removeQuotes(line.get(10));
+			String lemma = removeQuotes(line.get(13));
+			String correctLemma = correctLemmas.get(lemma);
+			if (correctLemma!=null)
+				lemma = correctLemma;
+			
+			int sentenceId = Integer.parseInt(removeQuotes(line.get(3)));
+			if (sentenceCount!=sentenceId) {
+				sentenceCount = sentenceId;
+				count++;
+				//dealWithSentence(token_sentence);				
+			}
+			Character posGroup = resolvePosGroup(pos);
+			TextToken token = new TextToken(word, lemma, posGroup);
+			//token_sentence.add(token);			
+		}		
+		//dealWithSentence(token_sentence);
+		out.println("Tested sentences: " + count);
+	}
 
 	static void processCsvFile(File fileCsv) throws FileNotFoundException, IOException {
 		out.println("Processing file: " + fileCsv);
@@ -1012,6 +1068,7 @@ public class MADRE_TextPro_Analysis {
 	}
 
 	private static float scaleEdge(int freq, int max) {
+		//return (int) Math.ceil(20d * Math.pow(2, freq)/Math.pow(2, max/2));
 		return (int) Math.ceil((double)freq/max*10);
 	}
 	
@@ -1327,6 +1384,11 @@ public class MADRE_TextPro_Analysis {
 		Utility.printChart(matrix);
 	}
 	
+	public static void main1(String[] args) throws Exception {
+		File f = new File("/Users/fedja/Downloads/corriere_2012.csv");
+		testCsvFile(f);
+	}
+	
 
 	public static void main(String[] args) throws Exception {
 
@@ -1353,6 +1415,8 @@ public class MADRE_TextPro_Analysis {
 		// "Corpora/trentino_stampa_2011/trentino_stampa_2011.csv");
 
 		for (File inputFile : new File(corporaPath).listFiles()) {
+			if (!inputFile.getName().startsWith("Repubblica"))
+				continue;				
 			if (!inputFile.getName().endsWith(".csv"))
 				continue;
 			
@@ -1429,6 +1493,8 @@ public class MADRE_TextPro_Analysis {
 			
 			System.out.println("nodes: " + nodeFreqStats.getN());
 			System.out.println("edges: " + arcWeightsStats.getN());
+			
+			//break;
 		}
 
 	}

@@ -106,7 +106,7 @@ x	VBG			verb, gerund or present participle			thinking is fun
 	WRB			wh-adverb									where, when 
 */
 
-public class Lynching_Stanford_Analysis {
+public class Conll_Network_Analysis {
 	
 	static final Color[] colorsPos = new ColorImpl[]{
 			new ColorImpl(0,255,0), 	// green adj (J)
@@ -626,6 +626,33 @@ public class Lynching_Stanford_Analysis {
 		System.out.println("Numer of edges: " + number_of_edges);
 		
 	}
+	
+	private static void buildMatrixfFile(File outputFile) throws FileNotFoundException {
+		
+		System.out.println("\n---- BUILDING MATRIX FILE: " + outputFile);
+		
+		PrintWriter pw = new PrintWriter(outputFile);
+		
+		for(Cell<LemmaPos, LemmaPos, int[]> cs : finalMatrix.cellSet()) {
+			int weight = cs.getValue()[0];
+			
+			LemmaPos[] tokens_RC = new LemmaPos[]{cs.getRowKey(), cs.getColumnKey()};
+			char[] pos_RC = new char[2];
+			Node[] nodes_RC = new Node[2];
+			for(int i=0; i<2; i++) {
+				LemmaPos token = tokens_RC[i];
+				char posType = token.pos;
+				pos_RC[i] = posType;
+			}
+			
+			pw.println(tokens_RC[0] + "\t" + tokens_RC[1] + "\t" + weight);
+			
+		}
+		
+		pw.close();
+		
+		
+	}
 
 
 
@@ -827,8 +854,6 @@ public class Lynching_Stanford_Analysis {
 	
 
 	
-
-
 	public static void main(String[] args) throws IOException {		
 		
 		//
@@ -842,11 +867,18 @@ public class Lynching_Stanford_Analysis {
 		//...		
 		int nodeSDcutOff = 1;  
 		int arcSDcutOff = 0;
-		linkByDependency = true;
+		linkByDependency = false;
 
-		
-		String path = "data/Lynching/";
-		File fileCoNLL = new File(path + "all_processed_Stanford_CORENLP_output.conll");		
+		File fileCoNLL = null;
+		if (args!=null && args.length>0) {
+			fileCoNLL = new File(args[0]);
+		}
+		else {		
+			//String path = "data/Lynching/";
+			//fileCoNLL = new File(path + "all_processed_Stanford_CORENLP_output.conll");
+			String path = "/Users/fedja/Dropbox/SocioNLP/Code/";
+			fileCoNLL = new File(path + "all_processed_Stanford_CORENLP_output.conll");
+		}
 		
 		/*
 		if (args!=null && args.length==3) {
@@ -878,7 +910,9 @@ public class Lynching_Stanford_Analysis {
 				"_mode_" + nodeSDcutOff + "_" + arcSDcutOff +
 				(linkByDependency ? "_DEP" : "") +
 				".gexf");
-		buildGexfFile(gephiFile);				
+		buildGexfFile(gephiFile);
+		buildMatrixfFile(FileUtil.replaceExtension(false, gephiFile, ".tsv"));
+		System.out.println(gephiFile);
 	}
 
 
