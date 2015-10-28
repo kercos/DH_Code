@@ -1,0 +1,14 @@
+#Fat Jar Configuration File
+#Tue Sep 29 17:56:39 CEST 2015
+onejar.license.required=false
+manifest.classpath=
+manifest.removesigners=true
+onejar.checkbox=false
+jarname=/Users/fedja/Dropbox/SocioNLP/Code/DH_Network_Builder.jar
+manifest.mergeall=true
+manifest.mainclass=corpora.Conll_Network_Analysis
+manifest.file=<createnew>
+jarname.isextern=true
+onejar.expand=
+excludes=<jar|jgrapht-core-0.9.3.jar>;<jar|jgrapht-ext-0.9.3.jar>;<jar|gephi-toolkit.jar>
+includes=
