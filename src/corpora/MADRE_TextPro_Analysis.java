@@ -16,10 +16,10 @@ import it.uniroma1.dis.wsngroup.gexf4j.core.impl.viz.ColorImpl;
 import it.uniroma1.dis.wsngroup.gexf4j.core.viz.Color;
 import it.uniroma1.dis.wsngroup.gexf4j.core.viz.NodeShape;
 
+import java.awt.Font;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
@@ -41,33 +41,46 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
-
-import javax.swing.filechooser.FileNameExtensionFilter;
-import javax.xml.transform.TransformerConfigurationException;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
+import org.gephi.graph.api.GraphController;
+import org.gephi.graph.api.GraphModel;
+import org.gephi.graph.api.UndirectedGraph;
+import org.gephi.io.exporter.api.ExportController;
+import org.gephi.io.exporter.preview.SVGExporter;
+import org.gephi.io.importer.api.Container;
+import org.gephi.io.importer.api.EdgeDefault;
+import org.gephi.io.importer.api.ImportController;
+import org.gephi.io.processor.plugin.DefaultProcessor;
+import org.gephi.layout.plugin.AutoLayout;
+import org.gephi.layout.plugin.forceAtlas.ForceAtlasLayout;
+import org.gephi.layout.plugin.forceAtlas2.ForceAtlas2;
+import org.gephi.preview.api.PreviewController;
+import org.gephi.preview.api.PreviewModel;
+import org.gephi.preview.api.PreviewProperties;
+import org.gephi.preview.api.PreviewProperty;
+import org.gephi.preview.types.DependantOriginalColor;
+import org.gephi.preview.types.EdgeColor;
+import org.gephi.project.api.ProjectController;
+import org.gephi.project.api.Workspace;
 import org.graphstream.algorithm.BetweennessCentrality;
 import org.graphstream.algorithm.BetweennessCentrality.Progress;
 import org.graphstream.graph.implementations.SingleGraph;
-import org.jgrapht.UndirectedGraph;
 import org.jgrapht.WeightedGraph;
-import org.jgrapht.ext.EdgeNameProvider;
-import org.jgrapht.ext.GraphMLExporter;
-import org.jgrapht.ext.IntegerEdgeNameProvider;
-import org.jgrapht.ext.IntegerNameProvider;
-import org.jgrapht.ext.StringEdgeNameProvider;
-import org.jgrapht.ext.StringNameProvider;
-import org.jgrapht.ext.VertexNameProvider;
-import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.DefaultWeightedEdge;
-import org.jgrapht.graph.SimpleGraph;
 import org.jgrapht.graph.SimpleWeightedGraph;
-import org.jgrapht.graph.UndirectedWeightedSubgraph;
-import org.xml.sax.SAXException;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.openide.util.Lookup;
 
+import uk.ac.ox.oii.sigmaexporter.SigmaExporter;
+import uk.ac.ox.oii.sigmaexporter.model.ConfigFile;
 import util.FileUtil;
 import util.Utility;
 
@@ -209,6 +222,9 @@ public class MADRE_TextPro_Analysis {
 		new ColorImpl(255,102,0) 	// ORANGE verbs (V)			
 	};
 	
+	static final ColorImpl blackColorEdge = new ColorImpl(0,0,0);
+	static final ColorImpl redColorEdge = new ColorImpl(255,0,0);
+	
 	static final Color blackColor = new ColorImpl(0,0,0);
 	
 	static final HashSet<String> excludedLemmas = new HashSet<String>(
@@ -226,11 +242,20 @@ public class MADRE_TextPro_Analysis {
 							"riproduzione",
 							"Pagina",
 							"Sera",
-							"Corriere"
+							"Corriere",
+							//from 13 Nov
+							"EATRO",
+							"Tel",
+							"tel.",
+							"www",
+							"via",
+							"zza",
 					}
-					//new String[]{}
-					// potere, volere,
 				));
+	static final String[] excludedLemmasRegExp = 
+		new String[]{
+			"[a-zA-Z]\\.?", //single letter with optional dot
+		};
 	
 	static final HashMap<String, String> correctLemmas = new HashMap<String, String>();
 	
@@ -269,6 +294,9 @@ public class MADRE_TextPro_Analysis {
 		correctLemmas.put("valle vallo", "valle");
 		correctLemmas.put("parlamentare parlamentario", "parlamentare");		
 		correctLemmas.put("genere genero", "genere");
+		//from 13 Nov
+		correctLemmas.put("roso", "rosa");
+		correctLemmas.put("presentire presentare", "presentare");
 	}
 	
 	//static boolean pruneKeywords = false;
@@ -603,12 +631,20 @@ public class MADRE_TextPro_Analysis {
 		
 	}
 	
+	private static boolean excludeLemma(String lemma) {
+		for(String re : excludedLemmasRegExp) {
+			if (lemma.matches(re))
+				return true;			
+		}
+		return excludedLemmas.contains(lemma);
+	}
+	
 	private static void processSentence(LinkedList<TextToken> token_sentence, LinkedList<TextToken> finalToken_sentence) {
 		
 		ListIterator<TextToken> iterFirst = finalToken_sentence.listIterator();
 		while(iterFirst.hasNext()) {
-			TextToken next = iterFirst.next();
-			if (!excludedLemmas.contains(next.lemma) && next.pos!=null) {
+			TextToken next = iterFirst.next();			
+			if (!excludeLemma(next.lemma) && next.pos!=null) {
 				if (next.lemma.contains(" ")) {
 					if (lemmasWithSpaces.add(next.lemma)) {
 						//out.println("\tWARNING: Found lemma with space: " + next.lemma);
@@ -936,7 +972,7 @@ public class MADRE_TextPro_Analysis {
 		}
 	}
 	
-	private static void exportMatrixToFiles(File outputFile) throws Exception {
+	private static File exportMatrixToFiles(File outputFile) throws Exception {
 		
 		out.println("\n---- BUILDING GEXF FILE: " + outputFile);
 		
@@ -1012,7 +1048,8 @@ public class MADRE_TextPro_Analysis {
 			}
 			
 			Edge gexfEdge = nodes_RC[0].connectTo(nodes_RC[1]);
-			gexfEdge.setColor(getArcColor(pos_RC[0],pos_RC[1]));
+			//gexfEdge.setColor(getArcColor(pos_RC[0],pos_RC[1]));
+			gexfEdge.setColor(weight==maxWeight ? redColorEdge : blackColorEdge);
 			gexfEdge.setWeight(scaleEdge(weight, maxWeight));
 			
 			DefaultWeightedEdge graphmlEdge = graphml.addEdge(labels_RC[0], labels_RC[1]);
@@ -1045,6 +1082,8 @@ public class MADRE_TextPro_Analysis {
 		out.println("Numer of nodes: " + number_of_nodes);
 		out.println("Numer of edges: " + number_of_edges);
 		
+		return gexfFile;
+		
 	}
 	
 
@@ -1069,6 +1108,8 @@ public class MADRE_TextPro_Analysis {
 
 	private static float scaleEdge(int freq, int max) {
 		//return (int) Math.ceil(20d * Math.pow(2, freq)/Math.pow(2, max/2));
+		// fare media + 2 deviazione standard, sotto la soglia sottili, sopra la soglia spessi
+		// mettere in rosso il legame più forte
 		return (int) Math.ceil((double)freq/max*10);
 	}
 	
@@ -1106,9 +1147,31 @@ public class MADRE_TextPro_Analysis {
 			HashMap<String, int[]> subTable = pos_lemma_freq.get(p);			
 			printFreqLemmas(subTable, f, minFreq);
 		}
-		File f = FileUtil.replaceExtension(false, outputFile, "_ALL.tsv");
-		printFreqLemmas(labels_freq, f, minFreq);
+		//File f = FileUtil.replaceExtension(false, outputFile, "_ALL.tsv");
+		//printFreqLemmas(labels_freq, f, minFreq);
 		
+	}
+	
+	static void printFreqLemmasFinalMatrix(File outputFile) throws FileNotFoundException {
+		
+		for(char p : pos_lemma_freq.keySet()) {
+			File f = FileUtil.replaceExtension(false, outputFile, "_"+p+".tsv");
+			HashMap<String,int[]> lemmaPosFreq = new HashMap<String,int[]>(); 
+			for(Cell<String, String, int[]> cs : finalMatrix.cellSet()) {
+				String[] labels_RC = new String[]{cs.getRowKey(), cs.getColumnKey()};
+				for(int i=0; i<2; i++) {
+					String label = labels_RC[i];
+					char posType = getPos(label);
+					if (posType!=p)
+						continue;
+					String lemma = label.substring(0, label.lastIndexOf('_'));					
+					int freq = labels_freq.get(label)[0];				
+					lemmaPosFreq.put(lemma, new int[]{freq});
+				}
+			}
+			printFreqLemmas(lemmaPosFreq, f, -1);
+		}
+
 	}
 	
 	
@@ -1127,6 +1190,9 @@ public class MADRE_TextPro_Analysis {
 			if (freq<minFreq)
 				break;
 			for(String l : lemmaSet) {
+				if (l.indexOf(' ')!=-1) {
+					System.err.println("Found lemma with space: " + l);
+				}
 				double ratio = freq/totFreq;
 				cum += ratio;
 				pw.println(l + '\t' + freq + '\t' + ratio + '\t' + cum);
@@ -1384,9 +1450,135 @@ public class MADRE_TextPro_Analysis {
 		Utility.printChart(matrix);
 	}
 	
+	public static String sigmaExport(Gexf gexf) throws IOException {
+		//Init a project - and therefore a workspace
+		out.println("---- EXPORT JSON:");
+		ProjectController pc = Lookup.getDefault().lookup(ProjectController.class);
+		pc.newProject();
+		//Workspace workspace = pc.getCurrentWorkspace();
+
+		//Import first file
+
+		//Layout setting
+		GraphModel graphModel = Lookup.getDefault().lookup(GraphController.class).getModel();
+
+		UndirectedGraph directedGraph = graphModel.getUndirectedGraph();
+
+		for (Node n : gexf.getGraph().getNodes()) {
+			org.gephi.graph.api.Node n0 = graphModel.factory().newNode(n.getId());
+
+			n0.getNodeData().setLabel(n.getLabel());
+			n0.getNodeData().setSize(n.getSize());
+			n0.getNodeData().setColor(n.getColor().getR() / 255f, n.getColor().getG() / 255f, n.getColor().getB() / 255f);
+			directedGraph.addNode(n0);
+		}
+
+		for (Edge e : gexf.getGraph().getAllEdges()) {
+			org.gephi.graph.api.Edge e0 = graphModel.factory().newEdge(directedGraph.getNode(e.getSource().getId()), directedGraph.getNode(e.getTarget().getId()));
+			e0.getEdgeData().setColor(e.getColor().getR() / 255f, e.getColor().getG() / 255f, e.getColor().getB() / 255f);
+			directedGraph.addEdge(e0);
+		}
+
+		AutoLayout autoLayout = new AutoLayout(1, TimeUnit.SECONDS);
+		autoLayout.setGraphModel(graphModel);
+		ForceAtlas2 atlasLayout = new ForceAtlas2(null);
+		//AutoLayout.DynamicProperty adjustBySizeProperty = AutoLayout.createDynamicProperty("forceAtlas2.adjustSizes.name", Boolean.TRUE, 0.1f);
+		//AutoLayout.DynamicProperty scaligRatioProperty = AutoLayout.createDynamicProperty("forceAtlas2.scalingRatio.name", new Double(10), 0f);
+		atlasLayout.setScalingRatio(25.0);
+		//atlasLayout.setGravity(150.0);
+		//atlasLayout.setStrongGravityMode(true);
+		//atlasLayout.setEdgeWeightInfluence(1.0);
+		atlasLayout.setAdjustSizes(true);
+		atlasLayout.setThreadsCount(4);
+
+		autoLayout.addLayout(atlasLayout, 1.0f);
+
+		autoLayout.execute();
+
+		JSONObject graph = new JSONObject();
+		JSONArray edges = new JSONArray();
+		JSONArray nodes = new JSONArray();
+		for (org.gephi.graph.api.Edge e : directedGraph.getEdges()) {
+			JSONObject edge = new JSONObject();
+			try {
+				edge.put("label", "");
+				edge.put("source", e.getSource().getNodeData().getId());
+				edge.put("target", e.getTarget().getNodeData().getId());
+				edge.put("id", e.getId() + "");
+				edge.put("attributes", new JSONObject());
+				edge.put("color", "rgb(" + (int) (e.getEdgeData().r() * 255f) + "," + (int) (e.getEdgeData().g() * 255f) + "," + (int) (e.getEdgeData().b() * 255f) + ")");
+				edge.put("size", e.getEdgeData().getSize());
+				edges.put(edge);
+			} catch (Exception f) {
+				f.printStackTrace();
+			}
+			;
+		}
+
+		for (org.gephi.graph.api.Node n : directedGraph.getNodes()) {
+			JSONObject node = new JSONObject();
+			try {
+				node.put("label", n.getNodeData().getLabel());
+				node.put("x", n.getNodeData().x());
+				node.put("y", n.getNodeData().y());
+				node.put("id", n.getNodeData().getId());
+				node.put("attributes", new JSONObject());
+				node.put("color", "rgb(" + (int) (n.getNodeData().r() * 255f) + "," + (int) (n.getNodeData().g() * 255f) + "," + (int) (n.getNodeData().b() * 255f) + ")");
+				node.put("size", n.getNodeData().getSize());
+				nodes.put(node);
+			} catch (Exception f) {
+				f.printStackTrace();
+			}		
+		}
+
+		try {
+			graph.put("edges", edges);
+			graph.put("nodes", nodes);
+		} catch (JSONException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		//out.println(graph.toString());\
+		atlasLayout.endAlgo();
+		autoLayout.cancel();
+		directedGraph.clear();
+		graphModel.destroyView(graphModel.getVisibleView());
+
+		pc.closeCurrentProject();
+		pc.closeCurrentWorkspace();
+
+		pc.removeProject(pc.getCurrentProject());
+
+		autoLayout = null;
+		directedGraph = null;
+		graphModel = null;
+		pc = null;
+
+		//System.gc();
+
+		return graph.toString();
+
+		//ExportController ec = Lookup.getDefault().lookup(ExportController.class);
+		//ec.exportFile(new File("data/output.svg"));		
+		//Writer writer = new PrintWriter(new File("data/output.svg"));
+		//SVGExporter svg=(SVGExporter)ec.getExporter("svg");
+		//ec.exportWriter(writer,svg);
+
+		/*
+		 * System.out.println("Start sigma export"); SigmaExporter se = new
+		 * SigmaExporter(); se.setWorkspace(workspace); ConfigFile cf = new
+		 * ConfigFile(); cf.setDefaults(); se.setConfigFile(cf, "data/", false);
+		 * //se.setConfigFile(ConfigFile cfg, String path, boolean renumber)
+		 * se.execute();
+		 */
+	}
+	
+	
 	public static void main1(String[] args) throws Exception {
-		File f = new File("/Users/fedja/Downloads/corriere_2012.csv");
+		File f = new File("/Volumes/HardDisk/Scratch/Projects/MADRE/Corpora/repubblica_2011_palermo_new.csv");
 		testCsvFile(f);
+		//File dir = new File("/Volumes/HardDisk/Scratch/Projects/MADRE/Corpora");
+		//cleanCsv(dir);
 	}
 	
 
@@ -1411,13 +1603,12 @@ public class MADRE_TextPro_Analysis {
 		String outputPath = path + "FinalNetworks/";
 		File keywordFile = new File(path + "patterns.txt");
 
-		// File inputFile = new File(path +
-		// "Corpora/trentino_stampa_2011/trentino_stampa_2011.csv");
-
 		for (File inputFile : new File(corporaPath).listFiles()) {
-			if (!inputFile.getName().startsWith("Repubblica"))
-				continue;				
-			if (!inputFile.getName().endsWith(".csv"))
+			//if (!inputFile.getName().startsWith("repubblica"))
+			//	continue;				
+			//if (!inputFile.getName().endsWith(".csv"))
+			//	continue;
+			if (!inputFile.getName().equals("repubblica_2011_palermo_new.csv"))
 				continue;
 			
 			//inputFile = new File(corporaPath + "trentino_stampa_2013.csv");
@@ -1457,11 +1648,6 @@ public class MADRE_TextPro_Analysis {
 
 			printBasicStatistics();
 
-			// printing lemmas freq distributionper categories
-			//File freqFile = FileUtil.replaceExtension(false, inputFile,
-			//		(useKeywords ? "_KWon_" : "_KWoff_") + "freq" + ".txt");
-			//printFreqLemmas(freqFile, 4);
-
 			removeLabelsNotInMatrix();
 			computeStatistics();
 			printNodeFreqStatistics(true);
@@ -1486,13 +1672,19 @@ public class MADRE_TextPro_Analysis {
 
 			computeDegreeStats(true);
 			printNodeDegreeStatistics(false);
+			
+			// printing lemmas freq distributionper categories
+			File freqFile = FileUtil.replaceExtension(false, logFile, "_lemma_freq" + ".txt");
+			printFreqLemmasFinalMatrix(freqFile);
 
-			exportMatrixToFiles(logFile);
+			File gexfFile = exportMatrixToFiles(logFile);
 
 			out.close();			
 			
 			System.out.println("nodes: " + nodeFreqStats.getN());
 			System.out.println("edges: " + arcWeightsStats.getN());
+			
+			GephiExporter.imageExporter(gexfFile, 60);		
 			
 			//break;
 		}

@@ -852,10 +852,9 @@ public class Conll_Network_Analysis {
         //System.out.println("Node Centrality (donna_S):   " + donnaScore);
 	}
 	
-
 	
-	public static void main(String[] args) throws IOException {		
-		
+	
+	public static void mainSocioNLP(String[] args) throws IOException {
 		//
 		//boolean pruneMatrixMode = 0;
 
@@ -913,6 +912,87 @@ public class Conll_Network_Analysis {
 		buildGexfFile(gephiFile);
 		buildMatrixfFile(FileUtil.replaceExtension(false, gephiFile, ".tsv"));
 		System.out.println(gephiFile);
+	}
+
+	public static void mainRepLetters(String[] args) throws IOException {
+		//
+		//boolean pruneMatrixMode = 0;
+
+		
+		//0: mean
+		//1: mean+1SD
+		//2: mean+2SD
+		//3: mean+3SD
+		//...		
+		int nodeSDcutOff = 0;  
+		int arcSDcutOff = 0;
+		linkByDependency = false;
+
+		File fileCoNLL = null;
+		if (args!=null && args.length>0) {
+			fileCoNLL = new File(args[0]);
+		}
+		else {		
+			//String path = "data/Lynching/";
+			//fileCoNLL = new File(path + "all_processed_Stanford_CORENLP_output.conll");
+			String path = "/Users/fedja/Downloads/sample/stanford/";
+			fileCoNLL = new File(path + "Dury_Hartlib_1628.txt.conll");
+		}
+		
+		/*
+		if (args!=null && args.length==3) {
+			fileCoNLL = new File(args[0]);
+			nodeSDcutOff = Integer.parseInt(args[1]);
+			arcSDcutOff = Integer.parseInt(args[2]);
+		}
+		*/
+		
+		processFileSentence(fileCoNLL);
+
+		printBasicStatistics();
+		
+		removeLabelsNotInMatrix();		
+		printMatrixStatistics(true);
+		
+		pruneMatrix(nodeSDcutOff, -1);		
+		removeLabelsNotInMatrix();
+		printMatrixStatistics(true);
+		
+		pruneMatrix(-1, arcSDcutOff);
+		removeLabelsNotInMatrix();
+		printMatrixStatistics(false);
+		
+		//computeBetweennessCentrality(false, 50);
+		//computeBetweennessCentrality(true, 50);
+		
+		File gephiFile = FileUtil.replaceExtension(false,fileCoNLL, 
+				"_mode_" + nodeSDcutOff + "_" + arcSDcutOff +
+				(linkByDependency ? "_DEP" : "") +
+				".gexf");
+		buildGexfFile(gephiFile);
+		buildMatrixfFile(FileUtil.replaceExtension(false, gephiFile, ".tsv"));
+		System.out.println(gephiFile);
+		
+		GephiExporter.buildPdf = true;
+		GephiExporter.buildSvg = false;
+		GephiExporter.buildSigma = false;
+		
+		GephiExporter.imageExporter(gephiFile, 30);
+	}
+
+
+	
+	public static void main(String[] args) throws IOException {		
+		
+		//mainSocioNLP(args);
+		
+		String path = "/Users/fedja/Downloads/sample/stanford/";
+		File[] files = (new File(path)).listFiles();
+		for(File f : files) {
+			if (f.getName().endsWith(".conll"))
+				mainRepLetters(new String[]{f.getAbsolutePath()});
+		}
+		
 	}
 
 

@@ -54,6 +54,7 @@ import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.gephi.graph.api.GraphController;
 import org.gephi.graph.api.GraphModel;
+import org.gephi.io.exporter.api.ExportController;
 import org.gephi.io.importer.api.Container;
 import org.gephi.io.importer.api.EdgeDefault;
 import org.gephi.io.importer.api.ImportController;
@@ -1405,7 +1406,7 @@ public class Alcide_Network_Analysis {
 		testCsvFile(f);
 	}
 	
-	public static void sigmaExport(File gexfFile) throws IOException {
+	public static void imageExporter(File gexfFile) throws IOException {
 		//Init a project - and therefore a workspace
 		ProjectController pc = Lookup.getDefault().lookup(ProjectController.class);
 		pc.newProject();
@@ -1454,9 +1455,13 @@ public class Alcide_Network_Analysis {
 		prop.putValue(PreviewProperty.BACKGROUND_COLOR, java.awt.Color.WHITE);
 		prop.putValue(PreviewProperty.BACKGROUND_COLOR, java.awt.Color.WHITE);
 		previewController.refreshPreview();
+		
+		String outputPath = gexfFile.getParent();
 				
-		//ExportController ec = Lookup.getDefault().lookup(ExportController.class);
-		//ec.exportFile(new File("data/output.svg"));		
+		ExportController ec = Lookup.getDefault().lookup(ExportController.class);
+		ec.exportFile(FileUtil.changeExtension(gexfFile, "svg"));
+		ec.exportFile(FileUtil.changeExtension(gexfFile, "pdf"));
+		
 		//Writer writer = new PrintWriter(new File("data/output.svg"));
 		//SVGExporter svg=(SVGExporter)ec.getExporter("svg");
 		//ec.exportWriter(writer,svg);
@@ -1465,7 +1470,7 @@ public class Alcide_Network_Analysis {
 		se.setWorkspace(workspace);
 		ConfigFile cf = new ConfigFile();
 		cf.setDefaults();
-		se.setConfigFile(cf, "data/", false);
+		se.setConfigFile(cf, outputPath, false);
 		//se.setConfigFile(ConfigFile cfg, String path, boolean renumber)
 		se.execute();
 	}
@@ -1547,7 +1552,7 @@ public class Alcide_Network_Analysis {
 		System.out.println("nodes: " + nodeFreqStats.getN());
 		System.out.println("edges: " + arcWeightsStats.getN());
 		
-		sigmaExport(gexfFile);
+		imageExporter(gexfFile);
 
 	}
 
