@@ -2,6 +2,7 @@ package util;
 
 
 import java.io.FileNotFoundException;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 
@@ -64,6 +65,17 @@ public class Connl_Stanford {
 		if (fields==null)
 			return null;
 		return new Connl_Stanford(fields);
+	}
+	
+	public static String[][] getNextGenericConnlLinesSentence(Scanner connlScan) {		
+		String[] fields = getNextConnlLinesFields(connlScan);
+		if (fields==null)
+			return null;
+		String[][] result = new String[fields.length][];
+		for(int i=0; i<fields.length; i++) {
+			result[i] = fields[i].split("\t");
+		}
+		return result;
 	}
 
 	

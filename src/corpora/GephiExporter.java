@@ -37,6 +37,9 @@ public class GephiExporter {
 	public static boolean buildPdf = true;
 	public static boolean buildSvg = true;
 	public static boolean buildSigma = true;
+	public static double REPULSION_STRENGTH = 60000;
+	
+	public static boolean directed = false;
 	
 	public static void imageExporter(File gexfFile, int seconds) throws IOException {
 		//Init a project - and therefore a workspace
@@ -64,7 +67,7 @@ public class GephiExporter {
         AutoLayout.DynamicProperty inertiaProperty = 
 			AutoLayout.createDynamicProperty("forceAtlas.inertia.name", new Double(0.1), 0f);
         AutoLayout.DynamicProperty repulsionStrength = 
-        		AutoLayout.createDynamicProperty("forceAtlas.repulsionStrength.name", new Double(60000.), 0f);
+        		AutoLayout.createDynamicProperty("forceAtlas.repulsionStrength.name", REPULSION_STRENGTH, 0f);
         AutoLayout.DynamicProperty attractionStrength = 
         		AutoLayout.createDynamicProperty("forceAtlas.attractionStrength.name", new Double(10.), 0f);
         AutoLayout.DynamicProperty maxDisplacement = 
@@ -80,7 +83,7 @@ public class GephiExporter {
         AutoLayout.DynamicProperty attDistrb = 
         		AutoLayout.createDynamicProperty("forceAtlas.outboundAttractionDistribution.name", Boolean.FALSE, 0f);//True after 10% of layout time
         AutoLayout.DynamicProperty adjustBySizeProperty = 
-        		AutoLayout.createDynamicProperty("forceAtlas.adjustSizes.name", Boolean.TRUE, 0f);                                 
+        		AutoLayout.createDynamicProperty("forceAtlas.adjustSizes.name", Boolean.TRUE, 0.1f);                                 
         AutoLayout.DynamicProperty speed = 
         		AutoLayout.createDynamicProperty("forceAtlas.gravity.name",new Double(1.), 0f);
         autoLayout.addLayout(atlasLayout, 1.0f, 
@@ -103,17 +106,21 @@ public class GephiExporter {
         PreviewController previewController = Lookup.getDefault().lookup(PreviewController.class);
 		PreviewModel previewModel = previewController.getModel();
 		PreviewProperties prop = previewModel.getProperties();
-		prop.putValue(PreviewProperty.NODE_OPACITY, new Double(60.0));
+		prop.putValue(PreviewProperty.NODE_OPACITY, new Double(40.0));
 		prop.putValue(PreviewProperty.SHOW_NODE_LABELS, Boolean.TRUE);
 		prop.putValue(PreviewProperty.NODE_LABEL_FONT, new Font("Arial",Font.PLAIN,8));
 		prop.putValue(PreviewProperty.NODE_LABEL_PROPORTIONAL_SIZE, Boolean.TRUE);
 		prop.putValue(PreviewProperty.NODE_LABEL_COLOR, new DependantOriginalColor(java.awt.Color.BLACK));
 		prop.putValue(PreviewProperty.SHOW_EDGES, Boolean.TRUE);
-		prop.putValue(PreviewProperty.EDGE_THICKNESS, new Double(1.5));
+		prop.putValue(PreviewProperty.SHOW_EDGE_LABELS, directed);
+		prop.putValue(PreviewProperty.DIRECTED, directed);
+		prop.putValue(PreviewProperty.EDGE_LABEL_FONT, new Font("Arial",Font.PLAIN,12));
+		prop.putValue(PreviewProperty.ARROW_SIZE, 10);
+		prop.putValue(PreviewProperty.EDGE_THICKNESS, new Double(0.5));
 		//prop.putValue(PreviewProperty.EDGE_COLOR, new EdgeColor(java.awt.Color.BLACK));
 		prop.putValue(PreviewProperty.EDGE_COLOR, new EdgeColor(EdgeColor.Mode.ORIGINAL));
 		prop.putValue(PreviewProperty.EDGE_OPACITY, 40);		
-		prop.putValue(PreviewProperty.EDGE_CURVED, Boolean.TRUE);		
+		prop.putValue(PreviewProperty.EDGE_CURVED, Boolean.FALSE);		
 		prop.putValue(PreviewProperty.BACKGROUND_COLOR, java.awt.Color.WHITE);
 		prop.putValue(PreviewProperty.MARGIN, 10);
 		previewController.refreshPreview();

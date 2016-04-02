@@ -20,7 +20,7 @@ public class ConllToken extends TextToken {
 		return new LemmaPos(lemma, pos, depRel);
 	}
 	
-	public LemmaPos getLemmaPosDepRel() {
+	public LemmaPosDepRel getLemmaPosDepRel() {
 		return new LemmaPosDepRel(lemma, pos, depRel);
 	}	
 	

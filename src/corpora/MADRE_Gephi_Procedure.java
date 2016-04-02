@@ -83,7 +83,6 @@ public class MADRE_Gephi_Procedure {
 		prop.putValue(PreviewProperty.EDGE_CURVED, Boolean.TRUE);
 		prop.putValue(PreviewProperty.EDGE_OPACITY, 40);		
 		prop.putValue(PreviewProperty.BACKGROUND_COLOR, Color.WHITE);
-		prop.putValue(PreviewProperty.BACKGROUND_COLOR, Color.WHITE);
 		previewController.refreshPreview();
 				
 		//ExportController ec = Lookup.getDefault().lookup(ExportController.class);

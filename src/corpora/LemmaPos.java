@@ -1,5 +1,7 @@
 package corpora;
 
+import java.util.HashSet;
+
 
 public class LemmaPos {
 
@@ -45,6 +47,15 @@ public class LemmaPos {
 		return this.lemma.hashCode();
 	}
 
+	
+	public static void main(String[] args) {
+		LemmaPos lp = new LemmaPos("lemma",'P');
+		LemmaPosDepRel lpd = new LemmaPosDepRel("lemma",'P',"depRel");
+		//System.out.println(lp.equals(lpd));
+		HashSet<LemmaPos> set = new HashSet<LemmaPos>();
+		set.add(lp);
+		System.out.println(set.contains(lpd.toLemmaPos()));
+	}
 	
 	
 		

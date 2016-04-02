@@ -7,6 +7,9 @@ public class LemmaPosDepRel extends LemmaPos{
 		super(lemma, pos, depRel);
 	}
 	
+	public LemmaPos toLemmaPos() {
+		return new LemmaPos(lemma, pos, depRel);
+	}
 	
 	public String toString() {
 		StringBuilder sb = new StringBuilder();		
